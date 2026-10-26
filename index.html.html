@@ -1,0 +1,276 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>디지털 도장 및 서명 생성기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=East+Sea+Dokdo&family=Nanum+Myeongjo:wght@700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+    <style>
+        .font-myeongjo { font-family: 'Nanum Myeongjo', serif; }
+        .font-dokdo { font-family: 'East Sea Dokdo', cursive; }
+        .font-pen { font-family: 'Nanum Pen Script', cursive; }
+        
+        body { background-color: #f3f4f6; }
+        .canvas-bg { background-image: radial-gradient(#d1d5db 1px, transparent 1px); background-size: 10px 10px; }
+    </style>
+</head>
+<body class="p-4 md:p-8 text-gray-800">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <h1 class="text-2xl md:text-3xl font-bold text-center text-blue-600 mb-8">디지털 도장 & 서명 생성기</h1>
+
+        <!-- 1. 디지털 도장 생성기 -->
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <h2 class="text-xl font-semibold mb-4 border-b pb-2">1. 디지털 이름 도장</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">이름</label>
+                        <input type="text" id="stampName" class="w-full border rounded-lg p-2" placeholder="홍길동" value="홍길동">
+                        <p class="text-xs text-gray-500 mt-1">* 3글자 이하시 자동으로 '인'이 붙습니다.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">글꼴 선택</label>
+                        <select id="stampFont" class="w-full border rounded-lg p-2">
+                            <option value="font-myeongjo">나눔명조 (기본)</option>
+                            <option value="font-dokdo">독도체 (개성있는)</option>
+                            <option value="font-pen">나눔펜글씨 (필기체)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">모양 선택</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2"><input type="radio" name="stampShape" value="circle" checked> 원형</label>
+                            <label class="flex items-center gap-2"><input type="radio" name="stampShape" value="square"> 사각형</label>
+                        </div>
+                    </div>
+                    <button onclick="drawStamp()" class="w-full bg-blue-500 text-white font-bold py-2 rounded-lg hover:bg-blue-600 transition">도장 생성 / 업데이트</button>
+                </div>
+                <div class="flex flex-col items-center justify-center space-y-4">
+                    <div class="border-2 border-dashed border-gray-300 p-4 rounded-lg bg-gray-50 w-full flex justify-center">
+                        <canvas id="stampCanvas" width="150" height="150" class="canvas-bg border bg-white shadow-sm"></canvas>
+                    </div>
+                    <button onclick="downloadCanvas('stampCanvas', '디지털도장.png')" class="bg-red-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-600 transition w-full">배경 투명 PNG 다운로드</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 커스텀 사인 패드 -->
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. 커스텀 서명 (사인) 패드</h2>
+            <div class="flex flex-col items-center space-y-4">
+                <p class="text-sm text-gray-500 w-full text-left">아래 영역에 손가락이나 마우스로 자유롭게 서명하세요.</p>
+                <!-- touch-none 방지 속성으로 모바일 스크롤 방지 -->
+                <div class="w-full max-w-[500px] border-2 border-gray-300 rounded-lg overflow-hidden bg-white">
+                    <canvas id="signCanvas" width="500" height="250" class="w-full touch-none canvas-bg"></canvas>
+                </div>
+                <div class="flex gap-4 w-full max-w-[500px]">
+                    <button onclick="clearSignCanvas()" class="flex-1 bg-gray-500 text-white font-bold py-2 rounded-lg hover:bg-gray-600 transition">지우기</button>
+                    <button onclick="downloadCanvas('signCanvas', '내서명.png')" class="flex-1 bg-green-500 text-white font-bold py-2 rounded-lg hover:bg-green-600 transition">서명 다운로드</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 우리반 전용 스티커 -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4 border-b pb-2">3. 우리반 전용 스티커 로고</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">스티커 텍스트</label>
+                        <input type="text" id="stickerText" class="w-full border rounded-lg p-2" placeholder="우리반 최고!" value="우리반 최고!">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">테마 색상</label>
+                        <input type="color" id="stickerColor" class="w-full h-12 p-1 border rounded-lg cursor-pointer" value="#3B82F6">
+                    </div>
+                    <button onclick="drawSticker()" class="w-full bg-blue-500 text-white font-bold py-2 rounded-lg hover:bg-blue-600 transition">스티커 생성 / 업데이트</button>
+                </div>
+                <div class="flex flex-col items-center justify-center space-y-4">
+                    <div class="border-2 border-dashed border-gray-300 p-4 rounded-lg bg-gray-50 w-full flex justify-center">
+                        <canvas id="stickerCanvas" width="200" height="200" class="canvas-bg border bg-white shadow-sm"></canvas>
+                    </div>
+                    <button onclick="downloadCanvas('stickerCanvas', '학급스티커.png')" class="bg-purple-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-600 transition w-full">스티커 다운로드</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 다운로드 공통 함수 (배경 투명화)
+        function downloadCanvas(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        }
+
+        /* 1. 도장 생성기 로직 */
+        function drawStamp() {
+            const canvas = document.getElementById('stampCanvas');
+            const ctx = canvas.getContext('2d');
+            let name = document.getElementById('stampName').value.trim();
+            const fontClass = document.getElementById('stampFont').value;
+            const shape = document.querySelector('input[name="stampShape"]:checked').value;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if(!name) return;
+            
+            // 이름 뒤에 '인' 처리
+            if (!name.endsWith('인') && name.length <= 3) {
+                name += '인';
+            }
+
+            const stampColor = '#dc2626'; // 빨간색
+            ctx.strokeStyle = stampColor;
+            ctx.fillStyle = stampColor;
+            ctx.lineWidth = 5;
+
+            // 외곽선 그리기
+            ctx.beginPath();
+            if (shape === 'circle') {
+                ctx.arc(75, 75, 65, 0, Math.PI * 2);
+            } else {
+                ctx.roundRect(10, 10, 130, 130, 15);
+            }
+            ctx.stroke();
+
+            // 폰트 설정
+            let fontName = 'Nanum Myeongjo';
+            if (fontClass === 'font-dokdo') fontName = 'East Sea Dokdo';
+            if (fontClass === 'font-pen') fontName = 'Nanum Pen Script';
+
+            ctx.font = `bold 42px '${fontName}'`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // 텍스트 배치 (2x2 배열 느낌으로)
+            if(name.length === 4) {
+                ctx.fillText(name.substring(0, 2), 75, 50);
+                ctx.fillText(name.substring(2, 4), 75, 100);
+            } else if (name.length === 3) {
+                ctx.fillText(name.substring(0, 2), 75, 50);
+                ctx.fillText(name.substring(2, 3), 75, 100);
+            } else {
+                ctx.fillText(name, 75, 75);
+            }
+        }
+
+        /* 2. 서명 패드 로직 (모바일 터치 대응) */
+        const signCanvas = document.getElementById('signCanvas');
+        const signCtx = signCanvas.getContext('2d');
+        let isDrawing = false;
+
+        function getCoordinates(e) {
+            const rect = signCanvas.getBoundingClientRect();
+            // 내부 해상도와 외부 CSS 크기 비율 계산
+            const scaleX = signCanvas.width / rect.width;
+            const scaleY = signCanvas.height / rect.height;
+            
+            if (e.touches && e.touches.length > 0) {
+                return {
+                    x: (e.touches[0].clientX - rect.left) * scaleX,
+                    y: (e.touches[0].clientY - rect.top) * scaleY
+                };
+            }
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        function startDrawing(e) {
+            e.preventDefault();
+            isDrawing = true;
+            const pos = getCoordinates(e);
+            signCtx.beginPath();
+            signCtx.moveTo(pos.x, pos.y);
+            signCtx.strokeStyle = '#000000';
+            signCtx.lineWidth = 4;
+            signCtx.lineCap = 'round';
+            signCtx.lineJoin = 'round';
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getCoordinates(e);
+            signCtx.lineTo(pos.x, pos.y);
+            signCtx.stroke();
+        }
+
+        function stopDrawing(e) {
+            e.preventDefault();
+            isDrawing = false;
+            signCtx.closePath();
+        }
+
+        function clearSignCanvas() {
+            signCtx.clearRect(0, 0, signCanvas.width, signCanvas.height);
+        }
+
+        // 마우스 이벤트
+        signCanvas.addEventListener('mousedown', startDrawing);
+        signCanvas.addEventListener('mousemove', draw);
+        signCanvas.addEventListener('mouseup', stopDrawing);
+        signCanvas.addEventListener('mouseout', stopDrawing);
+
+        // 터치 이벤트 (모바일)
+        signCanvas.addEventListener('touchstart', startDrawing, {passive: false});
+        signCanvas.addEventListener('touchmove', draw, {passive: false});
+        signCanvas.addEventListener('touchend', stopDrawing, {passive: false});
+
+
+        /* 3. 스티커 생성기 로직 */
+        function drawSticker() {
+            const canvas = document.getElementById('stickerCanvas');
+            const ctx = canvas.getContext('2d');
+            const text = document.getElementById('stickerText').value;
+            const color = document.getElementById('stickerColor').value;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 톱니바퀴/뱃지 스타일 디자인
+            ctx.beginPath();
+            ctx.arc(100, 100, 90, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(100, 100, 78, 0, Math.PI * 2);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([6, 6]);
+            ctx.stroke();
+            ctx.setLineDash([]); // 대시 리셋
+
+            // 텍스트 출력
+            ctx.font = "bold 24px 'Nanum Myeongjo'";
+            ctx.fillStyle = "#ffffff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            
+            if (text.length > 7) {
+                // 두 줄로 나누기
+                const mid = Math.ceil(text.length / 2);
+                ctx.fillText(text.substring(0, mid), 100, 80);
+                ctx.fillText(text.substring(mid), 100, 120);
+            } else {
+                ctx.fillText(text, 100, 100);
+            }
+        }
+
+        // 폰트 로드 후 초기 렌더링
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                drawStamp();
+                drawSticker();
+            }, 500); // 구글 폰트 로딩 대기
+        });
+    </script>
+</body>
+</html>
