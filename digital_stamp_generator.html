@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>디지털 이름 도장 & 서명 생성기</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=East+Sea+Dokdo&family=Gowun+Dodum&family=Nanum+Myeongjo:wght@700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons (optional, but good for UI) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Gowun Dodum', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .font-myeongjo { font-family: 'Nanum Myeongjo', serif; }
+        .font-dokdo { font-family: 'East Sea Dokdo', cursive; }
+        .font-pen { font-family: 'Nanum Pen Script', cursive; }
+        .font-gowun { font-family: 'Gowun Dodum', sans-serif; }
+
+        canvas {
+            touch-action: none; /* Prevent scrolling while drawing on signature pad */
+            background-image: linear-gradient(45deg, #e5e7eb 25%, transparent 25%), 
+                              linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), 
+                              linear-gradient(45deg, transparent 75%, #e5e7eb 75%), 
+                              linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+        }
+        
+        .tab-btn.active {
+            border-bottom: 2px solid #ef4444;
+            color: #ef4444;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm py-4 px-6 md:px-12 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="fa-solid fa-stamp text-red-500"></i> 디지털 도장 생성기
+        </h1>
+        <p class="text-sm text-gray-500 hidden md:block">행정/학급 서류용 투명 배경 PNG 생성</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-4xl">
+        
+        <!-- Tab Navigation -->
+        <div class="bg-white rounded-t-xl border-b flex overflow-x-auto">
+            <button onclick="switchTab('dojang')" id="tab-dojang" class="tab-btn active px-6 py-4 whitespace-nowrap hover:bg-gray-50 transition-colors">디지털 도장 (기본)</button>
+            <button onclick="switchTab('signature')" id="tab-signature" class="tab-btn px-6 py-4 whitespace-nowrap hover:bg-gray-50 transition-colors">커스텀 사인 (직접그리기)</button>
+            <button onclick="switchTab('sticker')" id="tab-sticker" class="tab-btn px-6 py-4 whitespace-nowrap hover:bg-gray-50 transition-colors">우리반 스티커 (로고)</button>
+        </div>
+
+        <!-- Content Area -->
+        <div class="bg-white shadow-md rounded-b-xl p-6 md:p-8 mb-8">
+            
+            <!-- 1. Digital Dojang Tab -->
+            <div id="content-dojang" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">이름 입력</label>
+                        <input type="text" id="dojang-name" value="홍길동" placeholder="이름을 입력하세요" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all">
+                        <p class="text-xs text-gray-500 mt-2">* 3글자 입력 시 자동으로 '인'이 추가됩니다.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">글씨체 선택</label>
+                        <select id="dojang-font" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 outline-none transition-all">
+                            <option value="Nanum Myeongjo">나눔명조 (정갈한)</option>
+                            <option value="East Sea Dokdo">독도체 (붓글씨)</option>
+                            <option value="Nanum Pen Script">나눔펜 (펜글씨)</option>
+                            <option value="Gowun Dodum">고운돋움 (단정한)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">외곽선 모양</label>
+                        <div class="flex gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="shape" value="circle" class="peer sr-only" checked>
+                                <div class="text-center py-3 border border-gray-300 rounded-lg peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:text-red-700 transition-all hover:bg-gray-50">
+                                    <i class="fa-regular fa-circle mb-1"></i> 원형
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="shape" value="square" class="peer sr-only">
+                                <div class="text-center py-3 border border-gray-300 rounded-lg peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:text-red-700 transition-all hover:bg-gray-50">
+                                    <i class="fa-regular fa-square mb-1"></i> 사각형
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center justify-center border-l-0 md:border-l border-gray-100 pl-0 md:pl-8">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">미리보기</h3>
+                    <div class="relative mb-6 border border-gray-200 p-2 bg-gray-50 rounded-lg shadow-sm">
+                        <!-- Canvas size: 240x240 for high quality -->
+                        <canvas id="dojang-canvas" width="240" height="240" class="w-48 h-48"></canvas>
+                    </div>
+                    <button onclick="downloadCanvas('dojang-canvas', '디지털도장.png')" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> 투명 배경으로 다운로드 (PNG)
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. Custom Signature Tab -->
+            <div id="content-signature" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">펜 색상</label>
+                        <div class="flex gap-3">
+                            <button onclick="setPenColor('#000000')" class="w-10 h-10 rounded-full bg-black ring-2 ring-offset-2 ring-transparent focus:ring-gray-400"></button>
+                            <button onclick="setPenColor('#1d4ed8')" class="w-10 h-10 rounded-full bg-blue-700 ring-2 ring-offset-2 ring-transparent focus:ring-blue-400"></button>
+                            <button onclick="setPenColor('#dc2626')" class="w-10 h-10 rounded-full bg-red-600 ring-2 ring-offset-2 ring-transparent focus:ring-red-400"></button>
+                        </div>
+                    </div>
+                    
+                    <button onclick="clearSignature()" class="mt-4 w-full md:w-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-eraser"></i> 캔버스 지우기
+                    </button>
+                    <p class="text-sm text-gray-500">우측 캔버스 영역에 마우스나 터치를 이용하여 자유롭게 서명하세요.</p>
+                </div>
+
+                <div class="flex flex-col items-center">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">서명 패드</h3>
+                    <div class="relative mb-6 border border-gray-300 rounded-lg overflow-hidden shadow-sm w-full max-w-sm">
+                        <canvas id="signature-canvas" width="400" height="200" class="w-full h-auto cursor-crosshair"></canvas>
+                    </div>
+                    <button onclick="downloadCanvas('signature-canvas', '내서명.png')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> 서명 이미지 다운로드
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Class Sticker Logo Tab -->
+            <div id="content-sticker" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">문구 입력</label>
+                        <input type="text" id="sticker-text" value="참 잘했어요!" placeholder="예: 3학년 2반, 참 잘했어요" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">아이콘 선택</label>
+                        <select id="sticker-icon" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 outline-none text-xl">
+                            <option value="⭐">⭐ 별</option>
+                            <option value="🍎">🍎 사과</option>
+                            <option value="👍">👍 최고</option>
+                            <option value="💖">💖 하트</option>
+                            <option value="🎯">🎯 목표달성</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">배경 테마 색상</label>
+                        <input type="color" id="sticker-color" value="#10b981" class="w-full h-12 rounded-lg cursor-pointer border border-gray-300">
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center justify-center border-l-0 md:border-l border-gray-100 pl-0 md:pl-8">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">미리보기</h3>
+                    <div class="relative mb-6 border border-gray-200 p-2 bg-gray-50 rounded-full shadow-sm">
+                        <canvas id="sticker-canvas" width="240" height="240" class="w-48 h-48 rounded-full"></canvas>
+                    </div>
+                    <button onclick="downloadCanvas('sticker-canvas', '학급스티커.png')" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> 스티커 로고 다운로드
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform transition-transform translate-y-20 opacity-0 flex items-center gap-3">
+        <i class="fa-solid fa-check-circle text-green-400"></i>
+        <span id="toast-message">다운로드가 시작되었습니다.</span>
+    </div>
+
+    <!-- Script -->
+    <script>
+        // Tab Management
+        function switchTab(tabId) {
+            // Hide all contents
+            document.getElementById('content-dojang').classList.add('hidden');
+            document.getElementById('content-signature').classList.add('hidden');
+            document.getElementById('content-sticker').classList.add('hidden');
+            
+            // Remove active classes
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+            // Show active content and set active class
+            document.getElementById(`content-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            
+            // Redraw active canvas to ensure sizing/fonts are correct
+            if(tabId === 'dojang') updateDojang();
+            if(tabId === 'sticker') updateSticker();
+        }
+
+        /* ---------------------------------------------------
+           1. Digital Dojang (Stamp) Logic
+        --------------------------------------------------- */
+        const dojangNameInput = document.getElementById('dojang-name');
+        const dojangFontSelect = document.getElementById('dojang-font');
+        const dojangShapeRadios = document.querySelectorAll('input[name="shape"]');
+
+        function updateDojang() {
+            const canvas = document.getElementById('dojang-canvas');
+            const ctx = canvas.getContext('2d');
+            const name = dojangNameInput.value.trim();
+            const font = dojangFontSelect.value;
+            const shape = document.querySelector('input[name="shape"]:checked').value;
+            const size = canvas.width;
+            
+            // Clear canvas (transparent background)
+            ctx.clearRect(0, 0, size, size);
+            
+            if (!name) return;
+
+            // Process name length (auto append '인')
+            let displayName = name;
+            if (displayName.length === 3) {
+                displayName += '인';
+            } else if (displayName.length > 4) {
+                displayName = displayName.substring(0, 4); // Max 4 chars for stamp layout
+            }
+
+            // Set styles
+            const stampColor = '#dc2626'; // Tailwind red-600
+            ctx.fillStyle = stampColor;
+            ctx.strokeStyle = stampColor;
+            
+            // Draw border
+            ctx.lineWidth = 10;
+            if (shape === 'circle') {
+                ctx.beginPath();
+                ctx.arc(size/2, size/2, (size/2) - (ctx.lineWidth/2) - 2, 0, 2 * Math.PI);
+                ctx.stroke();
+            } else {
+                ctx.lineJoin = 'miter';
+                ctx.strokeRect(ctx.lineWidth/2 + 2, ctx.lineWidth/2 + 2, size - ctx.lineWidth - 4, size - ctx.lineWidth - 4);
+            }
+
+            // Draw Text
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            if (displayName.length === 1) {
+                ctx.font = `bold 120px "${font}"`;
+                ctx.fillText(displayName, size/2, size/2 + 10);
+            } else if (displayName.length === 2) {
+                ctx.font = `bold 80px "${font}"`;
+                ctx.fillText(displayName[0], size/2, size/3 + 5);
+                ctx.fillText(displayName[1], size/2, (size/3)*2 + 15);
+            } else {
+                // 3 or 4 characters (2x2 Grid)
+                // Traditional Dojang Order: Right-to-Left, Top-to-Bottom
+                // Pos 0: Top-Right, Pos 1: Bottom-Right, Pos 2: Top-Left, Pos 3: Bottom-Left
+                ctx.font = `bold 80px "${font}"`;
+                const char4 = displayName.length === 3 ? '인' : displayName[3];
+                const chars = [displayName[0], displayName[1], displayName[2], char4];
+                
+                const positions = [
+                    { x: size * 0.73, y: size * 0.28 }, // Top Right
+                    { x: size * 0.73, y: size * 0.72 }, // Bottom Right
+                    { x: size * 0.27, y: size * 0.28 }, // Top Left
+                    { x: size * 0.27, y: size * 0.72 }, // Bottom Left
+                ];
+                
+                for(let i=0; i<4; i++) {
+                    // Small y offset adjustments to vertically center most Korean fonts nicely
+                    ctx.fillText(chars[i], positions[i].x, positions[i].y + 5);
+                }
+            }
+        }
+
+        // Attach listeners
+        dojangNameInput.addEventListener('input', updateDojang);
+        dojangFontSelect.addEventListener('change', updateDojang);
+        dojangShapeRadios.forEach(radio => radio.addEventListener('change', updateDojang));
+
+        /* ---------------------------------------------------
+           2. Custom Signature Pad Logic
+        --------------------------------------------------- */
+        const sigCanvas = document.getElementById('signature-canvas');
+        const sigCtx = sigCanvas.getContext('2d');
+        let isDrawing = false;
+        let penColor = '#000000';
+
+        function setPenColor(color) {
+            penColor = color;
+        }
+
+        function clearSignature() {
+            sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+        }
+
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            // Scale correctly based on display size vs canvas actual pixel size
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (evt.clientX - rect.left) * scaleX,
+                y: (evt.clientY - rect.top) * scaleY
+            };
+        }
+
+        function getTouchPos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (evt.touches[0].clientX - rect.left) * scaleX,
+                y: (evt.touches[0].clientY - rect.top) * scaleY
+            };
+        }
+
+        function startDrawing(x, y) {
+            isDrawing = true;
+            sigCtx.beginPath();
+            sigCtx.moveTo(x, y);
+            sigCtx.strokeStyle = penColor;
+            sigCtx.lineWidth = 4;
+            sigCtx.lineCap = 'round';
+            sigCtx.lineJoin = 'round';
+        }
+
+        function draw(x, y) {
+            if (!isDrawing) return;
+            sigCtx.lineTo(x, y);
+            sigCtx.stroke();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            sigCtx.closePath();
+        }
+
+        // Mouse Events
+        sigCanvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(sigCanvas, e);
+            startDrawing(pos.x, pos.y);
+        });
+        sigCanvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(sigCanvas, e);
+            draw(pos.x, pos.y);
+        });
+        sigCanvas.addEventListener('mouseup', stopDrawing);
+        sigCanvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch Events
+        sigCanvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            const pos = getTouchPos(sigCanvas, e);
+            startDrawing(pos.x, pos.y);
+        });
+        sigCanvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const pos = getTouchPos(sigCanvas, e);
+            draw(pos.x, pos.y);
+        });
+        sigCanvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopDrawing();
+        });
+
+
+        /* ---------------------------------------------------
+           3. Class Sticker Logo Logic
+        --------------------------------------------------- */
+        const stickerTextInput = document.getElementById('sticker-text');
+        const stickerIconSelect = document.getElementById('sticker-icon');
+        const stickerColorInput = document.getElementById('sticker-color');
+
+        function updateSticker() {
+            const canvas = document.getElementById('sticker-canvas');
+            const ctx = canvas.getContext('2d');
+            const text = stickerTextInput.value.trim();
+            const icon = stickerIconSelect.value;
+            const color = stickerColorInput.value;
+            const size = canvas.width;
+            
+            ctx.clearRect(0, 0, size, size);
+            
+            // Draw Background Circle
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2, 0, 2*Math.PI);
+            ctx.fill();
+            
+            // Draw Inner Dashed/Solid Border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([8, 6]);
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2 - 12, 0, 2*Math.PI);
+            ctx.stroke();
+            ctx.setLineDash([]); // reset
+
+            // Draw Icon
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '80px sans-serif';
+            ctx.fillText(icon, size/2, size/2 - 20);
+            
+            // Draw Text
+            ctx.font = 'bold 24px "Gowun Dodum", sans-serif';
+            ctx.fillText(text, size/2, size/2 + 55);
+        }
+
+        stickerTextInput.addEventListener('input', updateSticker);
+        stickerIconSelect.addEventListener('change', updateSticker);
+        stickerColorInput.addEventListener('input', updateSticker);
+
+
+        /* ---------------------------------------------------
+           Utility: Download Function & Initialization
+        --------------------------------------------------- */
+        function downloadCanvas(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const dataUrl = canvas.toDataURL("image/png");
+            
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            showToast(`${filename} 다운로드 완료!`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Initialize Canvases once fonts are loaded to avoid FOUT (Flash of Unstyled Text)
+        document.fonts.ready.then(() => {
+            updateDojang();
+            updateSticker();
+            clearSignature();
+        });
+
+    </script>
+</body>
+</html>
